@@ -28,4 +28,5 @@ for (sample_name in names(bootstrap_samples)) {
 
 weight <- c(0.1, 0.9)
 names(weight) <- c("Resample1", "Resample2")
-cross_validation_results %>% mutate(weight=weight[sample]) %>% group_by(fold, sample) %>% summarise(predicted*weight)
+# TODO: group by data number as well
+cross_validation_results %>% mutate(weight=weight[sample]) %>% group_by(fold) %>% summarise(sum(predicted*weight))
