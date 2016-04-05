@@ -13,12 +13,14 @@ predictor <- function(fit, data) {
 
 raw <- read.csv("/Users/ryomiyajima/predicting_a_biological_response/train.csv", header = T)
 raw[, 1] <- factor(raw[, 1])
-num_folds <- 4
-folds <- createFolds(raw[, 1], k=num_folds)
-sapply(folds, function(sample) {
-  train <- raw[-sample,]
-  test <- raw[sample,]
-  fit <- fit_generator(train)
-  predicted <- predictor(fit, test[, -1])
-  log_loss(cbind(1-predicted, predicted), test[, 1] %>% as.integer - 1)
-}) %>% mean
+
+cross_validate <- function(fit, predictor, data, num_folds=4) {
+  folds <- createFolds(raw[, 1], k=num_folds)
+  return(sapply(folds, function(sample) {
+    train <- raw[-sample,]
+    test <- raw[sample,]
+    fit <- fit_generator(train)
+    predictor(fit, test[, -1])
+    # log_loss(cbind(1-predicted, predicted), test[, 1] %>% as.integer - 1)
+  }))
+}
