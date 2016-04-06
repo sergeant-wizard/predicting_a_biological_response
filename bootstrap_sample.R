@@ -12,7 +12,8 @@ num_folds <- 4
 folds <- create_folds(num_folds)
 bootstrap_samples <- createResample(train[, 1], times=num_bootstrap_samples)
 
-cross_validation_results <- data.frame(predicted=double(), fold=character(), sample=character())
+cross_validation_results <- data.frame()
+test_prediction <- data.frame()
 for (sample_name in names(bootstrap_samples)) {
   sample <- bootstrap_samples[[sample_name]]
   input <- train[sample, -1] %>% data.matrix
@@ -24,6 +25,13 @@ for (sample_name in names(bootstrap_samples)) {
   cross_validation_results <- bind_rows(
     cross_validation_results,
     cross_validate(fit, predictor, train, folds) %>% mutate(sample=sample_name))
+  test_prediction <- bind_rows(
+    test_prediction,
+    data.frame(
+      predicted=predictor(fit, test),
+      sample=sample_name,
+      data_id=as.integer(rownames(test)),
+      stringsAsFactors=F))
 }
 
 # TODO: we want to optimize this weight
@@ -41,3 +49,8 @@ cross_validation_results %>%
   summarise(log_loss=-mean(log)) %>%
   summarise(mean(log_loss))
   
+# aggregate test prediction based on optimized weight
+test_prediction %>%
+  mutate(weight=weight[sample]) %>%
+  group_by(data_id) %>% 
+  summarise(prob=1-sum(predicted*weight))
