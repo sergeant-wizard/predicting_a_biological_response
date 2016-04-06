@@ -5,7 +5,7 @@ source("/Users/ryomiyajima/repos/predicting_a_biological_response/cross_validati
 
 train <- read.csv("/Users/ryomiyajima/repos/predicting_a_biological_response/train.csv", header = T)
 train[, 1] <- factor(train[, 1])
-test <- read.csv("/Users/ryomiyajima/repos/predicting_a_biological_response/test.csv", header = T)
+# test <- read.csv("/Users/ryomiyajima/repos/predicting_a_biological_response/test.csv", header = T)
 
 num_bootstrap_samples <- 2
 num_folds <- 4
@@ -26,7 +26,18 @@ for (sample_name in names(bootstrap_samples)) {
     cross_validate(fit, predictor, train, folds) %>% mutate(sample=sample_name))
 }
 
-weight <- c(0.1, 0.9)
+# TODO: we want to optimize this weight
+weight <- c(0.5, 0.5)
 names(weight) <- c("Resample1", "Resample2")
-# TODO: group by data number as well
-cross_validation_results %>% mutate(weight=weight[sample]) %>% group_by(fold) %>% summarise(sum(predicted*weight))
+eps <- 1.0E-4
+cross_validation_results %>%
+  mutate(weight=weight[sample]) %>%
+  group_by(data_id, fold) %>%
+  summarise(prob=sum(predicted*weight)) %>%
+  mutate(activity=train$Activity[data_id]) %>%
+  mutate(log_arg = if (activity == 1) max(eps, prob) else max(eps, 1-prob)) %>%
+  mutate(log=log(log_arg)) %>%
+  group_by(fold) %>%
+  summarise(log_loss=-mean(log)) %>%
+  summarise(mean(log_loss))
+  
