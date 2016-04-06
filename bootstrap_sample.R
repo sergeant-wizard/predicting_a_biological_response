@@ -5,9 +5,9 @@ source("/Users/ryomiyajima/repos/predicting_a_biological_response/cross_validati
 
 train <- read.csv("/Users/ryomiyajima/repos/predicting_a_biological_response/train.csv", header = T)
 train[, 1] <- factor(train[, 1])
-# test <- read.csv("/Users/ryomiyajima/repos/predicting_a_biological_response/test.csv", header = T)
+test <- read.csv("/Users/ryomiyajima/repos/predicting_a_biological_response/test.csv", header = T)
 
-num_bootstrap_samples <- 2
+num_bootstrap_samples <- 50
 num_folds <- 4
 folds <- create_folds(num_folds)
 bootstrap_samples <- createResample(train[, 1], times=num_bootstrap_samples)
@@ -35,8 +35,8 @@ for (sample_name in names(bootstrap_samples)) {
 }
 
 # TODO: we want to optimize this weight
-weight <- c(0.5, 0.5)
-names(weight) <- c("Resample1", "Resample2")
+weight <- rep(1 / num_bootstrap_samples, num_bootstrap_samples)
+names(weight) <- cross_validation_results$sample %>% unique
 eps <- 1.0E-4
 cross_validation_results %>%
   mutate(weight=weight[sample]) %>%
@@ -50,7 +50,11 @@ cross_validation_results %>%
   summarise(mean(log_loss))
   
 # aggregate test prediction based on optimized weight
-test_prediction %>%
+submitted_data <- test_prediction %>%
   mutate(weight=weight[sample]) %>%
   group_by(data_id) %>% 
-  summarise(prob=1-sum(predicted*weight))
+  summarise(prob=sum(predicted*weight))
+
+write.table(
+  submitted_data,
+  file="out.csv", row.names=F, sep=",")
